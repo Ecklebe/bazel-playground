@@ -1,0 +1,10 @@
+{
+    "bazel.enableCodeLens": true,
+    "bazel.executable": "bazelisk",
+    "bazel.buildifierExecutable": "buildifier",
+    "bazel.buildifierFixOnFormat": true,
+    "files.trimTrailingWhitespace": true,
+    "[starlark]": {
+        "editor.formatOnSave": true,
+    },
+}
