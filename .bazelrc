@@ -1,0 +1,70 @@
+# Enable Bzlmod for every Bazel command
+common --enable_bzlmod
+
+# Enable Platform specific config
+common --enable_platform_specific_config
+
+# If curses is disabled there is no report_progress printed!
+common --curses auto
+
+# NOTE: Workaround for having filenames with spaces in runfiles!!!
+common --experimental_inprocess_symlink_creation
+
+# Use hermetic Python for bootstarpping py_binary rules.
+# Do not foget to load py_binary like: load("@rules_python//python:defs.bzl", "py_binary")!
+# Failing to do so will result in a following error:
+#    xxxxxxx/%stage2_bootstrap%': [Errno 2] No such file or directory
+common --@rules_python//python/config_settings:bootstrap_impl=script
+
+# Needs investigation -> https://github.com/bazelbuild/rules_python/issues/2364
+common --@rules_python//python/config_settings:exec_tools_toolchain=disabled
+
+# Use settings for better ressource management
+common --experimental_cpu_load_scheduling
+common --local_resources=cpu=HOST_CPUS
+
+# Load local config if available
+try-import .bazelrc-local
+
+# Make Bazel print out all options from rc files.
+build --announce_rc
+
+# Only new style toolchain resolution ( platform ) is supported!
+build --incompatible_enable_cc_toolchain_resolution=true
+build --incompatible_use_cc_configure_from_rules_cc=trues
+
+# No stamping for now
+build --nostamp
+
+# Do not expose host tmp
+build --incompatible_sandbox_hermetic_tmp=true
+
+# Add some metadata to the builds
+build --build_metadata=project=bazel-minimum-example
+
+###################################################
+# Tips from https://blog.aspect.dev/bazelrc-flags #
+###################################################
+# Don't let environment variables like $PATH sneak into the build,
+# which can cause massive cache misses when they change
+build --incompatible_strict_action_env
+# Do not allow network in the sanbox
+build --sandbox_default_allow_network=false
+# Allows spaces in filenames which are inputs to actions. ( last resort !!! )
+#build --experimental_inprocess_symlink_creation
+###################################################
+
+# Print less info
+# --experimental_ui_max_stdouterr_bytes (an integer in (-1)-1073741819 range; default: "1048576")
+build --experimental_ui_max_stdouterr_bytes=10000
+
+# print verbose information
+build:verbose --logging=6 --show_loading_progress --show_progress
+build:verbose --subcommands=pretty_print --verbose_failures --experimental_ui_max_stdouterr_bytes=-1
+
+# Build with debug and print extra info
+build:debug --config=verbose
+build:debug --sandbox_debug
+build:debug --compilation_mode=dbg --strip=never --features=-treat_warnings_as_errors
+build:debug --toolchain_resolution_debug=.*
+build:debug --test_output=streamed
