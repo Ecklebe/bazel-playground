@@ -17,6 +17,8 @@ RUN echo "The only things that we need" \
         apt-transport-https \
         apt-utils \
         ca-certificates \
+        # g++ is needed as we have until now no hermetic toolchain for rules_cc
+        g++ \
     # Update system certificates
     && apt-get --only-upgrade install ca-certificates \
     && update-ca-certificates --fresh \

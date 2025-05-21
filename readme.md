@@ -16,8 +16,6 @@ bazelisk run //:generate_sample_files
 
 ### Python script execution
 
-> This does not work in the Docker environment! Needs a fix to run.
-
 ```shell
 bazelisk run //python_example:main
 ```
