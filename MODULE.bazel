@@ -6,7 +6,7 @@ module(name = "bazel-minimum-example")
 #
 # For more details, please check https://github.com/bazelbuild/bazel/issues/18958
 ###############################################################################
-bazel_dep(name = "platforms", version = "0.0.10")
+bazel_dep(name = "platforms", version = "0.0.11")
 bazel_dep(name = "rules_cc", version = "0.1.1")
 bazel_dep(name = "with_cfg.bzl", version = "0.10.1")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
@@ -106,6 +106,7 @@ use_repo(python, "python_3_11", "python_3_11_host")
 # Setup PyPI
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
+    experimental_index_url = "https://pypi.org/simple",
     extra_pip_args = [
         "--disable-pip-version-check",
         "--no-color",
@@ -114,7 +115,7 @@ pip.parse(
     hub_name = "bazel_pypi",
     python_interpreter_target = "@python_3_11_host//:bin/python3",
     python_version = "3.11",
-    requirements_lock = "//requirements.txt",
+    requirements_lock = "//:requirements.txt",
 )
 use_repo(pip, "bazel_pypi")
 
