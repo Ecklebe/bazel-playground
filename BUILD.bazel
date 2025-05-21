@@ -3,6 +3,7 @@ load("@aspect_bazel_lib//lib:jq.bzl", "jq")
 load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
 load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_file", "write_source_files")
 load("@bazel_skylib//rules:select_file.bzl", "select_file")
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
 
 # Create output files report.html, report.txt and report.xml in the output folder of the genrule target.
 # Zip everything in the wildcard_output folder and make the zip archive a output of the genrule target.
@@ -258,4 +259,33 @@ write_source_files(
         ":write_patched_config_json",
     ],
     visibility = ["//visibility:public"],
+)
+
+############################
+# Buildifier and buildozer:
+#    bazelisk run //:buildifier.check
+#    bazelisk run //:buildifier.fix
+# or with:
+#    bazelisk run -- @buildifier_prebuilt//:buildozer ARGS
+#    bazelisk run -- @buildifier_prebuilt//:buildifier ARGS
+buildifier(
+    name = "buildifier.check",
+    diff_command = "diff -u",
+    exclude_patterns = [
+        "./.git/*",
+    ],
+    lint_mode = "warn",
+    mode = "diff",
+)
+
+buildifier_test(
+    name = "buildifier.fix",
+    diff_command = "diff -u",
+    exclude_patterns = [
+        "./.git/*",
+    ],
+    lint_mode = "fix",
+    mode = "fix",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
 )

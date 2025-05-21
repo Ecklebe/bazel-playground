@@ -64,9 +64,6 @@ bazel_dep(name = "re2", version = "2024-07-02.bcr.1")
 # To maybe get sphinx documentation running
 bazel_dep(name = "rules_doxygen", version = "2.2.0")
 
-# Functions to help creating repositories
-new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
-
 # aspect_bazel_lib is needed for copying files
 bazel_dep(name = "aspect_bazel_lib", version = "2.11.0")
 
@@ -118,13 +115,3 @@ pip.parse(
     requirements_lock = "//:requirements.txt",
 )
 use_repo(pip, "bazel_pypi")
-
-
-
-
-
-
-
-
-
-
