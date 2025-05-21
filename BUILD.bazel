@@ -1,0 +1,261 @@
+load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
+load("@aspect_bazel_lib//lib:jq.bzl", "jq")
+load("@aspect_bazel_lib//lib:run_binary.bzl", "run_binary")
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_file", "write_source_files")
+load("@bazel_skylib//rules:select_file.bzl", "select_file")
+
+# Create output files report.html, report.txt and report.xml in the output folder of the genrule target.
+# Zip everything in the wildcard_output folder and make the zip archive a output of the genrule target.
+# There are multiple ways to search for the files in the wildcard_output folder:
+# 1. Use the find command on the wildcard_output folder. (first zip does not have directories, the second zip is flatened)
+# 2. Use the shell glob on the wildcard_output folder.  (third zip wrong, the fourth zip is correct with the globstar option set)
+# 3. Use the shell glob from inside wildcard_output folder. (Not recommended, as it's more complex and less readable, use the previous option instead)
+# Important: The shell glob can only work correctly if the shell option globstar is set.
+genrule(
+    name = "gen_files",
+    srcs = [],
+    outs = [
+        "report.html",
+        "report.txt",
+        "report.xml",
+        "wildcard_output.zip",
+        "wildcard_output_flat.zip",
+        "wildcard_output_glob_wrong.zip",
+        "wildcard_output_glob.zip",
+        "wildcard_output_glob_stripped.zip",
+    ],
+    cmd = """\
+        echo "This is the first file content" > $(location report.html) \
+        && echo "This is the second file content" > $(location report.txt) \
+        && echo "This is the third file content" > $(location report.xml) \
+        && mkdir -p wildcard_output \
+        && echo "This is the first file content" > wildcard_output/test1.txt \
+        && echo "This is the second file content" > wildcard_output/test2.txt \
+        && mkdir -p wildcard_output/subfolder \
+        && echo "This is the third file content" > wildcard_output/subfolder/test3.txt \
+        && echo "This is the fourth file content" > wildcard_output/subfolder/test4.txt \
+        && echo "This is the fifth file content, that we want also to ignore" > wildcard_output/subfolder/test5.txt \
+        && mkdir -p wildcard_output/subfolder/level2subfolder \
+        && echo "This is the sixth file content" > wildcard_output/subfolder/level2subfolder/test6.txt \
+        && echo "wildcard_output.zip" \
+        && $(location @bazel_tools//tools/zip:zipper) c $(location wildcard_output.zip) $$(find wildcard_output -type f) \
+        && $(location @bazel_tools//tools/zip:zipper) v $(location wildcard_output.zip) \
+        && echo "wildcard_output_flat.zip" \
+        && $(location @bazel_tools//tools/zip:zipper) cf $(location wildcard_output_flat.zip) $$(find wildcard_output -type f) \
+        && $(location @bazel_tools//tools/zip:zipper) v $(location wildcard_output_flat.zip) \
+        && echo "wildcard_output_glob_wrong.zip" \
+        && $(location @bazel_tools//tools/zip:zipper) c $(location wildcard_output_glob_wrong.zip) wildcard_output/** \
+        && $(location @bazel_tools//tools/zip:zipper) v $(location wildcard_output_glob_wrong.zip) \
+        && echo "wildcard_output_glob.zip" \
+        && shopt -s globstar \
+        && $(location @bazel_tools//tools/zip:zipper) c $(location wildcard_output_glob.zip) wildcard_output/** \
+        && $(location @bazel_tools//tools/zip:zipper) v $(location wildcard_output_glob.zip) \
+        && echo "wildcard_output_glob_stripped.zip" \
+        && CWD=$$PWD && pushd $$CWD/wildcard_output && $$CWD/$(location @bazel_tools//tools/zip:zipper) c $$CWD/$(location wildcard_output_glob_stripped.zip) ** && popd \
+        && $(location @bazel_tools//tools/zip:zipper) v $(location wildcard_output_glob.zip) \
+        """,
+    tools = [
+        "@bazel_tools//tools/zip:zipper",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+select_file(
+    name = "select_file_report_html",
+    srcs = ":gen_files",
+    subpath = "report.html",
+    visibility = ["//visibility:private"],
+)
+
+write_source_file(
+    name = "write_report_html",
+    check_that_out_file_exists = False,
+    diff_test = True,
+    executable = False,
+    in_file = ":select_file_report_html",
+    out_file = "//:playground/bazel/minimum-example/report.html",
+    visibility = ["//visibility:public"],
+)
+
+select_file(
+    name = "select_file_report_txt",
+    srcs = ":gen_files",
+    subpath = "report.txt",
+    visibility = ["//visibility:private"],
+)
+
+write_source_file(
+    name = "write_report_txt",
+    check_that_out_file_exists = False,
+    diff_test = True,
+    executable = False,
+    in_file = ":select_file_report_txt",
+    out_file = "//:playground/bazel/minimum-example/report.txt",
+    visibility = ["//visibility:public"],
+)
+
+select_file(
+    name = "select_file_report_xml",
+    srcs = ":gen_files",
+    subpath = "report.xml",
+    visibility = ["//visibility:private"],
+)
+
+write_source_file(
+    name = "write_report_xml",
+    check_that_out_file_exists = False,
+    diff_test = True,
+    executable = False,
+    in_file = ":select_file_report_xml",
+    out_file = "//:playground/bazel/minimum-example/report.xml",
+    visibility = ["//visibility:public"],
+)
+
+# Create a config.json file with some example content.
+# use the jq tool to print the content of the config.json file.
+genrule(
+    name = "gen_config",
+    srcs = [],
+    outs = ["config.json"],
+    cmd = """\
+        echo '{' > $(location config.json) \
+        && echo '  "example_key": "example_value",' >> $(location config.json) \
+        && echo '  "path_to_file": "/abs/path/to/report.xml",' >> $(location config.json) \
+        && echo '  "nested": {' >> $(location config.json) \
+        && echo '    "key": "value",' >> $(location config.json) \
+        && echo '    "another_key": "another_value"' >> $(location config.json) \
+        && echo '  },' >> $(location config.json) \
+        && echo '  "array_example": [' >> $(location config.json) \
+        && echo '    "item1",' >> $(location config.json) \
+        && echo '    "item2",' >> $(location config.json) \
+        && echo '    "item3"' >> $(location config.json) \
+        && echo '  ]' >> $(location config.json) \
+        && echo '}' >> $(location config.json) \
+        && $(JQ_BIN) '.' $(location config.json)
+    """,
+    toolchains = ["@jq_toolchains//:resolved_toolchain"],
+    visibility = ["//visibility:private"],
+)
+
+write_source_file(
+    name = "write_config_json",
+    check_that_out_file_exists = False,
+    diff_test = True,
+    executable = False,
+    in_file = ":gen_config",
+    out_file = "//:playground/bazel/minimum-example/config.json",
+    visibility = ["//visibility:public"],
+)
+
+# Use jq to patch the config.json file with the path to the report.xml file.
+jq(
+    name = "patch_config",
+    srcs = [":gen_config"],
+    out = "patched_config.json",
+    args = ["--arg BAZEL_SANDBOX_PATH \"$(location :select_file_report_txt)\""],
+    data = [":select_file_report_txt"],
+    expand_args = True,
+    filter = ".path_to_file |= $BAZEL_SANDBOX_PATH",
+)
+
+write_source_file(
+    name = "write_patched_config_json",
+    check_that_out_file_exists = False,
+    diff_test = True,
+    executable = False,
+    in_file = ":patch_config",
+    out_file = "//:playground/bazel/minimum-example/patched_config.json",
+    visibility = ["//visibility:public"],
+)
+
+select_file(
+    name = "select_file_wildcard_output_flat_zip",
+    srcs = ":gen_files",
+    subpath = "wildcard_output_flat.zip",
+    visibility = ["//visibility:private"],
+)
+
+run_binary(
+    name = "unzip_wildcard_output_flat_zip",
+    srcs = [
+        ":select_file_wildcard_output_flat_zip",
+    ],
+    args = [
+        "x",
+        "$(location :select_file_wildcard_output_flat_zip)",
+        "-d",
+        "$@",
+    ],
+    out_dirs = ["wildcard_output_flat"],
+    tool = "@bazel_tools//tools/zip:zipper",
+    visibility = ["//visibility:public"],
+)
+
+write_source_file(
+    name = "write_wildcard_output_flat",
+    check_that_out_file_exists = False,
+    diff_test = True,
+    executable = False,
+    in_file = ":unzip_wildcard_output_flat_zip",
+    out_file = "//:playground/bazel/minimum-example/wildcard_output_flat",
+    visibility = ["//visibility:public"],
+)
+
+select_file(
+    name = "select_file_wildcard_output_zip",
+    srcs = ":gen_files",
+    subpath = "wildcard_output.zip",
+    visibility = ["//visibility:private"],
+)
+
+run_binary(
+    name = "unzip_wildcard_output_zip",
+    srcs = [
+        ":select_file_wildcard_output_zip",
+    ],
+    args = [
+        "x",
+        "$(location :select_file_wildcard_output_zip)",
+        "-d",
+        "$@",
+    ],
+    out_dirs = ["wildcard_output"],
+    tool = "@bazel_tools//tools/zip:zipper",
+    visibility = ["//visibility:public"],
+)
+
+copy_to_directory(
+    name = "select_subfolder_from_unzip_wildcard_output_zip",
+    srcs = [":unzip_wildcard_output_zip"],
+    out = "subfolder_from_unzip_wildcard_output_zip",
+    exclude_srcs_patterns = [
+        "**/test5.txt",
+    ],
+    include_srcs_patterns = ["wildcard_output/wildcard_output/subfolder/**"],
+    replace_prefixes = {"wildcard_output/wildcard_output/subfolder": ""},
+    visibility = ["//visibility:public"],
+)
+
+write_source_file(
+    name = "write_wildcard_output_subfolder",
+    check_that_out_file_exists = False,
+    diff_test = False,
+    executable = False,
+    in_file = ":select_subfolder_from_unzip_wildcard_output_zip",
+    out_file = "//:playground/bazel/minimum-example/wildcard_output_subfolder",
+    visibility = ["//visibility:public"],
+)
+
+write_source_files(
+    name = "generate_sample_files",
+    additional_update_targets = [
+        ":write_report_html",
+        ":write_report_txt",
+        ":write_report_xml",
+        ":write_wildcard_output_flat",
+        ":write_wildcard_output_subfolder",
+        ":write_config_json",
+        ":write_patched_config_json",
+    ],
+    visibility = ["//visibility:public"],
+)
