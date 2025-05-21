@@ -31,7 +31,7 @@ build --announce_rc
 
 # Only new style toolchain resolution ( platform ) is supported!
 build --incompatible_enable_cc_toolchain_resolution=true
-build --incompatible_use_cc_configure_from_rules_cc=trues
+build --incompatible_use_cc_configure_from_rules_cc=true
 
 # No stamping for now
 build --nostamp
